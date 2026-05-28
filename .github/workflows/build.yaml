@@ -5,12 +5,19 @@ on:
     tags:
       - '*'
 
+env:
+  DOCKER_IMAGE: ${{ vars.DOCKER_IMAGE || format('ghcr.io/{0}', github.repository) }}
+  DOCKER_REGISTRY: ${{ vars.DOCKER_REGISTRY || 'ghcr.io' }}
+
 jobs:
   docker-build:
     runs-on: ${{ matrix.runner }}
     name:
       ${{ matrix.engine }} - ${{ matrix.browser }} - ${{ matrix.platform }} -
       ${{ matrix.tag }}
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -25,15 +32,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
-          images: ${{ vars.DOCKER_IMAGE }}
+          images: ${{ env.DOCKER_IMAGE }}
           flavor: latest=false
           tags: |
             type=raw,value=${{ matrix.tag }}
@@ -41,15 +48,16 @@ jobs:
 
       - name: Login to image repository
         if: github.ref_type == 'tag'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USER || github.actor }}
+          password: ${{ secrets.DOCKER_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Build (attempt 1)
         id: build1
         continue-on-error: true
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
@@ -71,7 +79,7 @@ jobs:
         id: build2
         if: steps.build1.outcome == 'failure'
         continue-on-error: true
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
@@ -91,7 +99,7 @@ jobs:
 
       - name: Build (attempt 3)
         if: steps.build2.outcome == 'failure'
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
@@ -120,7 +128,7 @@ jobs:
             --name smoke \
             --rm -p3000:3000 \
             -e WAHA_API_KEY=test \
-            ${{ vars.DOCKER_IMAGE }}:${{ matrix.tag }}
+            ${{ env.DOCKER_IMAGE }}:${{ matrix.tag }}
 
           sleep 3
           docker logs smoke
@@ -128,7 +136,7 @@ jobs:
           docker rm --force smoke
 
       - name: Push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
