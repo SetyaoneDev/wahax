@@ -6,6 +6,10 @@ import {
 } from '@waha/core/storage/sql/schemas';
 import { Sqlite3KVRepository } from '@waha/core/storage/sqlite3/Sqlite3KVRepository';
 
+const API_KEY_METADATA = new Map<string, (entity: ApiKey) => any>([
+  ['isActive', (entity: ApiKey) => (entity.isActive ? 1 : 0)],
+]);
+
 export class Sqlite3ApiKeyRepository
   extends Sqlite3KVRepository<ApiKey>
   implements IApiKeyRepository
@@ -19,9 +23,7 @@ export class Sqlite3ApiKeyRepository
   }
 
   get metadata() {
-    return new Map<string, (entity: ApiKey) => any>([
-      ['isActive', (entity: ApiKey) => (entity.isActive ? 1 : 0)],
-    ]);
+    return API_KEY_METADATA;
   }
 
   constructor(store: LocalStore) {

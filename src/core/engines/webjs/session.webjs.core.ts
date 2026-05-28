@@ -98,7 +98,12 @@ import {
   WAHASessionStatus,
   WAMessageAck,
 } from '@waha/structures/enums.dto';
-import { BinaryFile, RemoteFile } from '@waha/structures/files.dto';
+import {
+  BinaryFile,
+  RemoteFile,
+  VoiceBinaryFile,
+  VoiceRemoteFile,
+} from '@waha/structures/files.dto';
 import {
   CreateGroupRequest,
   GroupParticipant,
@@ -2270,13 +2275,15 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
     };
   }
 
-  protected async toMessageMedia(file: any): Promise<MessageMedia> {
+  protected async toMessageMedia(
+    file: BinaryFile | RemoteFile | VoiceBinaryFile | VoiceRemoteFile,
+  ): Promise<MessageMedia> {
     if ('data' in file) {
       // BinaryFile - base64 encoded data
       return new MessageMedia(
         file.mimetype,
         file.data,
-        file.filename || null,
+        file.filename ?? null,
       );
     } else {
       // RemoteFile - fetch from URL
@@ -2285,7 +2292,7 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
       return new MessageMedia(
         file.mimetype,
         base64,
-        file.filename || null,
+        (file as RemoteFile).filename ?? null,
       );
     }
   }
