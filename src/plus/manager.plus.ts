@@ -370,7 +370,7 @@ export class SessionManagerPlus extends SessionManager implements OnModuleInit {
       return null;
     }
     const runningSession = this.sessions.get(name);
-    let engineInfo = {};
+    let engineInfo: Record<string, any> = {};
     if (runningSession) {
       try {
         engineInfo = await promiseTimeout(1000, runningSession.getEngineInfo());
