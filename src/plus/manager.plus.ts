@@ -23,7 +23,7 @@ import { WebhookConductor } from '@waha/core/integrations/webhooks/WebhookConduc
 import { MediaManager } from '@waha/core/media/MediaManager';
 import { MediaStorageFactory } from '@waha/core/media/MediaStorageFactory';
 import { EngineConfigService } from '@waha/core/config/EngineConfigService';
-import { CoreApiKeyRepository } from '@waha/core/storage/CoreApiKeyRepository';
+import { Sqlite3ApiKeyRepository } from '@waha/core/storage/sqlite3/Sqlite3ApiKeyRepository';
 import { LocalSessionAuthRepository } from '@waha/core/storage/LocalSessionAuthRepository';
 import { LocalSessionConfigRepository } from '@waha/core/storage/LocalSessionConfigRepository';
 import { LocalStoreCore } from '@waha/core/storage/LocalStoreCore';
@@ -122,7 +122,8 @@ export class SessionManagerPlus extends SessionManager implements OnModuleInit {
   }
 
   async onApplicationBootstrap() {
-    this.apiKeyRepository = new CoreApiKeyRepository();
+    this.apiKeyRepository = new Sqlite3ApiKeyRepository(this.store);
+    await this.apiKeyRepository.init();
     await this.engineBootstrap.bootstrap();
     this.startPredefinedSessions();
   }

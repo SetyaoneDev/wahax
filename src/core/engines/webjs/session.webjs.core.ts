@@ -98,7 +98,12 @@ import {
   WAHASessionStatus,
   WAMessageAck,
 } from '@waha/structures/enums.dto';
-import { BinaryFile, RemoteFile } from '@waha/structures/files.dto';
+import {
+  BinaryFile,
+  RemoteFile,
+  VoiceBinaryFile,
+  VoiceRemoteFile,
+} from '@waha/structures/files.dto';
 import {
   CreateGroupRequest,
   GroupParticipant,
@@ -845,16 +850,38 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
     );
   }
 
-  sendImage(request: MessageImageRequest) {
-    throw new AvailableInPlusVersion();
+  @Activity()
+  async sendImage(request: MessageImageRequest) {
+    const chatId = this.ensureSuffix(request.chatId);
+    const media = await this.toMessageMedia(request.file);
+    const options = {
+      ...this.getMessageOptions(request),
+      caption: request.caption,
+    };
+    return this.whatsapp.sendMessage(chatId, media, options);
   }
 
-  sendFile(request: MessageFileRequest) {
-    throw new AvailableInPlusVersion();
+  @Activity()
+  async sendFile(request: MessageFileRequest) {
+    const chatId = this.ensureSuffix(request.chatId);
+    const media = await this.toMessageMedia(request.file);
+    const options = {
+      ...this.getMessageOptions(request),
+      caption: request.caption,
+      sendMediaAsDocument: true,
+    };
+    return this.whatsapp.sendMessage(chatId, media, options);
   }
 
-  sendVoice(request: MessageVoiceRequest) {
-    throw new AvailableInPlusVersion();
+  @Activity()
+  async sendVoice(request: MessageVoiceRequest) {
+    const chatId = this.ensureSuffix(request.chatId);
+    const media = await this.toMessageMedia(request.file);
+    const options = {
+      ...this.getMessageOptions(request),
+      sendAudioAsVoice: true,
+    };
+    return this.whatsapp.sendMessage(chatId, media, options);
   }
 
   sendButtonsReply(request: MessageButtonReply) {
@@ -2247,7 +2274,31 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
       linkPreview: request.linkPreview,
     };
   }
+
+  protected async toMessageMedia(
+    file: BinaryFile | RemoteFile | VoiceBinaryFile | VoiceRemoteFile,
+  ): Promise<MessageMedia> {
+    if ('data' in file) {
+      // BinaryFile - base64 encoded data
+      return new MessageMedia(
+        file.mimetype,
+        file.data,
+        file.filename ?? null,
+      );
+    } else {
+      // RemoteFile - fetch from URL
+      const buffer = await this.fetch(file.url);
+      const base64 = buffer.toString('base64');
+      return new MessageMedia(
+        file.mimetype,
+        base64,
+        (file as RemoteFile).filename ?? null,
+      );
+    }
+  }
+
 }
+
 
 export class WEBJSEngineMediaProcessor
   implements IMediaEngineProcessor<Message>
